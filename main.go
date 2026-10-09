@@ -1,8 +1,12 @@
 package main
 
 import (
+	"database/sql"
 	"fmt"
+	"log"
 	"os"
+
+	_ "github.com/go-sql-driver/mysql"
 )
 
 func main() {
@@ -21,7 +25,26 @@ func main() {
 		dbUser, dbPassword, dbHost, dbPort, dbName,
 	)
 
-	fmt.Println("DSN:", dsn)
-	// TODO: gunakan DSN untuk connect ke database
+	db, err := OpenDB(dsn)
+	if err != nil {
+		log.Fatalf("Gagal koneksi: %v", err)
+		return
+	}
 
+	defer db.Close()
+
+}
+
+func OpenDB(dsn string) (*sql.DB, error) {
+	db, err := sql.Open("mysql", dsn)
+	if err != nil {
+		return nil, err
+	}
+
+	err = db.Ping()
+	if err != nil {
+		return nil, err
+	}
+
+	return db, nil
 }
