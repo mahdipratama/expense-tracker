@@ -10,6 +10,10 @@ import (
 	_ "github.com/go-sql-driver/mysql"
 )
 
+type application struct {
+	DB *sql.DB
+}
+
 func main() {
 	mux := http.NewServeMux()
 
@@ -30,16 +34,19 @@ func main() {
 	dsn := fmt.Sprintf("%s:%s@tcp(%s:%s)/%s?parseTime=true",
 		dbUser, dbPassword, dbHost, dbPort, dbName,
 	)
-	fmt.Print(dsn)
 
-	db, err := OpenDB(dsn)
+	db, err := openDB(dsn)
 	if err != nil {
 		log.Fatalf("Gagal koneksi: %v", err)
 	}
 
 	defer db.Close()
 
-	mux.HandleFunc("/", home)
+	app := &application{
+		DB: db,
+	}
+
+	mux.HandleFunc("/", app.home)
 
 	log.Printf("Starting new server on %s", appPort)
 	err = http.ListenAndServe(addr, mux)
@@ -47,7 +54,7 @@ func main() {
 
 }
 
-func OpenDB(dsn string) (*sql.DB, error) {
+func openDB(dsn string) (*sql.DB, error) {
 	db, err := sql.Open("mysql", dsn)
 	if err != nil {
 		return nil, err
