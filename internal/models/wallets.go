@@ -2,6 +2,7 @@ package models
 
 import (
 	"database/sql"
+	"errors"
 	"time"
 )
 
@@ -31,4 +32,23 @@ func (m *WalletModel) Insert(name string, balance int) (int, error) {
 	}
 
 	return int(id), nil
+}
+
+func (m *WalletModel) Get(id int) (*Wallet, error) {
+	stmt := `SELECT id, name, balance, created FROM wallets WHERE id = ?`
+
+	row := m.DB.QueryRow(stmt, id)
+
+	w := &Wallet{}
+
+	err := row.Scan(&w.ID, &w.Name, &w.Balance, &w.Created)
+	if err != nil {
+		if errors.Is(err, sql.ErrNoRows) {
+			return nil, ErrNoRecord
+		} else {
+			return nil, err
+		}
+	}
+
+	return w, nil
 }
