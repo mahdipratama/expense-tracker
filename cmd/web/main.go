@@ -8,10 +8,11 @@ import (
 	"os"
 
 	_ "github.com/go-sql-driver/mysql"
+	"github.com/mahdipratama/expense-tracker/internal/models"
 )
 
 type application struct {
-	DB *sql.DB
+	wallets *models.WalletModel
 }
 
 func main() {
@@ -43,7 +44,7 @@ func main() {
 	defer db.Close()
 
 	app := &application{
-		DB: db,
+		wallets: &models.WalletModel{DB: db},
 	}
 
 	mux.HandleFunc("/", app.home)
