@@ -12,7 +12,9 @@ import (
 )
 
 type application struct {
-	wallets *models.WalletModel
+	infoLog  *log.Logger
+	errorLog *log.Logger
+	wallets  *models.WalletModel
 }
 
 func main() {
@@ -43,8 +45,13 @@ func main() {
 
 	defer db.Close()
 
+	infoLog := log.New(os.Stdout, "INFO\t", log.Ldate|log.Ltime)
+	errorLog := log.New(os.Stderr, "ERROR\t", log.Ldate|log.Ltime|log.Lshortfile)
+
 	app := &application{
-		wallets: &models.WalletModel{DB: db},
+		infoLog:  infoLog,
+		errorLog: errorLog,
+		wallets:  &models.WalletModel{DB: db},
 	}
 
 	mux.HandleFunc("/", app.home)
