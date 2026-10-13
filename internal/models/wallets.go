@@ -52,3 +52,33 @@ func (m *WalletModel) Get(id int) (*Wallet, error) {
 
 	return w, nil
 }
+
+func (m *WalletModel) All() ([]*Wallet, error) {
+	stmt := `SELECT id, name, balance, created FROM wallets `
+	rows, err := m.DB.Query(stmt)
+	if err != nil {
+		return nil, err
+	}
+
+	defer rows.Close()
+
+	wallets := make([]*Wallet, 0)
+
+	for rows.Next() {
+		w := &Wallet{}
+		err = rows.Scan(&w.ID, &w.Name, &w.Balance, &w.Created)
+
+		if err != nil {
+			return nil, err
+		}
+
+		wallets = append(wallets, w)
+	}
+
+	err = rows.Err()
+	if err != nil {
+		return nil, err
+	}
+
+	return wallets, nil
+}
