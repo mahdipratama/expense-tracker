@@ -18,8 +18,6 @@ type application struct {
 }
 
 func main() {
-	mux := http.NewServeMux()
-
 	dbPassword := os.Getenv("DB_PASSWORD")
 	dbUser := os.Getenv("DB_USER")
 	dbHost := os.Getenv("DB_HOST")
@@ -54,10 +52,14 @@ func main() {
 		wallets:  &models.WalletModel{DB: db},
 	}
 
-	mux.HandleFunc("/", app.home)
+	srv := &http.Server{
+		Addr:     addr,
+		ErrorLog: errorLog,
+		Handler:  app.routes(),
+	}
 
 	log.Printf("Starting new server on %s", appPort)
-	err = http.ListenAndServe(addr, mux)
+	err = srv.ListenAndServe()
 	log.Fatal(err)
 
 }
