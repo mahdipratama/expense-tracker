@@ -7,6 +7,7 @@ func (app *application) routes() *http.ServeMux {
 
 	mux.HandleFunc("/", app.home)
 	mux.HandleFunc("/wallets", app.walletHandler)
+	mux.HandleFunc("/wallet", app.GetWalletHandler)
 
 	return mux
 }
