@@ -21,3 +21,7 @@ func (app *application) clientError(w http.ResponseWriter, status int) {
 func (app *application) notFound(w http.ResponseWriter) {
 	app.clientError(w, http.StatusNotFound)
 }
+
+func (app *application) badRequest(w http.ResponseWriter, message string) {
+	http.Error(w, message, http.StatusBadRequest)
+}
