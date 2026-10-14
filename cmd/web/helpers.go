@@ -1,6 +1,7 @@
 package main
 
 import (
+	"encoding/json"
 	"fmt"
 	"net/http"
 	"runtime/debug"
@@ -15,7 +16,7 @@ func (app *application) serverError(w http.ResponseWriter, err error) {
 }
 
 func (app *application) clientError(w http.ResponseWriter, status int) {
-	http.Error(w, http.StatusText(status), status)
+	app.writeJSONError(w, status, http.StatusText(status))
 }
 
 func (app *application) notFound(w http.ResponseWriter) {
@@ -23,5 +24,13 @@ func (app *application) notFound(w http.ResponseWriter) {
 }
 
 func (app *application) badRequest(w http.ResponseWriter, message string) {
-	http.Error(w, message, http.StatusBadRequest)
+	app.writeJSONError(w, http.StatusBadRequest, message)
+}
+
+func (app *application) writeJSONError(w http.ResponseWriter, status int, message string) {
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(status)
+
+	resp := map[string]string{"error": message}
+	json.NewEncoder(w).Encode(resp)
 }
