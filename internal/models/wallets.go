@@ -4,6 +4,8 @@ import (
 	"database/sql"
 	"errors"
 	"time"
+
+	"github.com/go-sql-driver/mysql"
 )
 
 type WalletModel struct {
@@ -22,8 +24,15 @@ func (m *WalletModel) Insert(name string, balance int) (int, error) {
 	VALUES (?,?, UTC_TIMESTAMP())`
 
 	result, err := m.DB.Exec(stmt, name, balance)
+
 	if err != nil {
-		return 0, err
+		mysqlErr, ok := err.(*mysql.MySQLError)
+
+		if ok && mysqlErr.Number == 1062 {
+			return 0, ErrDuplicateWallet
+		} else {
+			return 0, err
+		}
 	}
 
 	id, err := result.LastInsertId()
