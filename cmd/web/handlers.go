@@ -3,8 +3,10 @@ package main
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/mahdipratama/expense-tracker/internal/models"
 )
@@ -58,3 +60,55 @@ func (app *application) GetWalletHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 }
+
+func (app *application) createWalletHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
+	err := r.ParseForm()
+	if err != nil {
+		app.badRequest(w, "Failed to parse form")
+		return
+	}
+
+	name := r.PostForm.Get("name")
+	balanceStr := r.PostForm.Get("balance")
+
+	if strings.TrimSpace(name) == "" {
+		app.badRequest(w, "Wallet name can not be empty")
+		return
+	}
+
+	balance, err := strconv.Atoi(balanceStr)
+	if err != nil {
+		app.badRequest(w, "balance must be a valide number")
+		return
+	}
+
+	if balance <= 0 {
+		app.badRequest(w, "balance can not be negative or zero")
+		return
+	}
+
+	id, err := app.wallets.Insert(name, balance)
+	if err != nil {
+		if errors.Is(err, models.ErrDuplicateWallet) {
+			app.badRequest(w, "Wallet with this name already exists")
+			return
+		}
+
+		app.serverError(w, err)
+		return
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+	w.WriteHeader(http.StatusCreated)
+
+	fmt.Fprintf(w, `{"id": %d, "message": "wallet created"}`, id)
+
+}
+
+
