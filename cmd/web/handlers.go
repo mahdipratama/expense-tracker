@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"errors"
-	"fmt"
 	"net/http"
 	"strconv"
 	"strings"
@@ -64,18 +63,21 @@ func (app *application) GetWalletHandler(w http.ResponseWriter, r *http.Request)
 func (app *application) createWalletHandler(w http.ResponseWriter, r *http.Request) {
 	if r.Method != http.MethodPost {
 		w.Header().Set("Allow", http.MethodPost)
-		http.Error(w, "Method not allowed", http.StatusMethodNotAllowed)
+		app.clientError(w, http.StatusMethodNotAllowed)
 		return
 	}
 
 	err := r.ParseForm()
 	if err != nil {
 		app.badRequest(w, "Failed to parse form")
+
 		return
 	}
 
 	name := r.PostForm.Get("name")
 	balanceStr := r.PostForm.Get("balance")
+	// name := r.URL.Query().Get("name")
+	// balanceStr := r.URL.Query().Get("balance")
 
 	if strings.TrimSpace(name) == "" {
 		app.badRequest(w, "Wallet name can not be empty")
@@ -84,7 +86,7 @@ func (app *application) createWalletHandler(w http.ResponseWriter, r *http.Reque
 
 	balance, err := strconv.Atoi(balanceStr)
 	if err != nil {
-		app.badRequest(w, "balance must be a valide number")
+		app.badRequest(w, "balance must be a valid number")
 		return
 	}
 
@@ -107,8 +109,15 @@ func (app *application) createWalletHandler(w http.ResponseWriter, r *http.Reque
 	w.Header().Set("Content-Type", "application/json")
 	w.WriteHeader(http.StatusCreated)
 
-	fmt.Fprintf(w, `{"id": %d, "message": "wallet created"}`, id)
+	resp := map[string]string{
+		"ID":      strconv.Itoa(id),
+		"message": "Wallet created",
+	}
+
+	err = json.NewEncoder(w).Encode(resp)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
 
 }
-
-
