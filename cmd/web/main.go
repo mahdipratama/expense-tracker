@@ -15,6 +15,7 @@ type application struct {
 	infoLog  *log.Logger
 	errorLog *log.Logger
 	wallets  *models.WalletModel
+	expense  *models.ExpenseModel
 }
 
 func main() {
@@ -50,6 +51,7 @@ func main() {
 		infoLog:  infoLog,
 		errorLog: errorLog,
 		wallets:  &models.WalletModel{DB: db},
+		expense:  &models.ExpenseModel{DB: db},
 	}
 
 	srv := &http.Server{
