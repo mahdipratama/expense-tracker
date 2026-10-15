@@ -121,3 +121,37 @@ func (app *application) createWalletHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 }
+
+func (app *application) listExpensesHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		app.clientError(w, http.StatusMethodNotAllowed)
+		return
+	}
+
+	walletIDStr := r.URL.Query().Get("wallet")
+	walletID := 0
+
+	if walletIDStr != "" {
+		var err error
+		walletID, err = strconv.Atoi(walletIDStr)
+		if err != nil || walletID < 1 {
+			app.badRequest(w, "invalid wallet_id parameter")
+		}
+	}
+
+	expenses, err := app.expense.All(&walletID)
+	if err != nil {
+		app.serverError(w, err)
+	}
+
+	w.Header().Set("Content-Type", "application/json")
+
+	w.WriteHeader(http.StatusOK)
+
+	err = json.NewEncoder(w).Encode(expenses)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+}
