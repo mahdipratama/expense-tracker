@@ -129,20 +129,23 @@ func (app *application) listExpensesHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
+	var walletID *int = nil
 	walletIDStr := r.URL.Query().Get("wallet")
-	walletID := 0
 
 	if walletIDStr != "" {
 		var err error
-		walletID, err = strconv.Atoi(walletIDStr)
-		if err != nil || walletID < 1 {
+		id, err := strconv.Atoi(walletIDStr)
+		if err != nil || id < 1 {
 			app.badRequest(w, "invalid wallet_id parameter")
+			return
 		}
+		walletID = &id
 	}
 
-	expenses, err := app.expense.All(&walletID)
+	expenses, err := app.expense.All(walletID)
 	if err != nil {
 		app.serverError(w, err)
+		return
 	}
 
 	w.Header().Set("Content-Type", "application/json")
