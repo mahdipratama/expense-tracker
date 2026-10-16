@@ -1,7 +1,6 @@
 package main
 
 import (
-	"encoding/json"
 	"errors"
 	"net/http"
 	"strconv"
@@ -21,15 +20,7 @@ func (app *application) walletHandler(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-
-	w.WriteHeader(http.StatusOK)
-
-	err = json.NewEncoder(w).Encode(wallets)
-	if err != nil {
-		app.serverError(w, err)
-		return
-	}
+	app.writeJSONResponseBody(w, http.StatusOK, wallets)
 }
 
 func (app *application) GetWalletHandler(w http.ResponseWriter, r *http.Request) {
@@ -49,15 +40,7 @@ func (app *application) GetWalletHandler(w http.ResponseWriter, r *http.Request)
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-
-	w.WriteHeader(http.StatusOK)
-
-	err = json.NewEncoder(w).Encode(wallet)
-	if err != nil {
-		app.serverError(w, err)
-		return
-	}
+	app.writeJSONResponseBody(w, http.StatusOK, wallet)
 }
 
 func (app *application) createWalletHandler(w http.ResponseWriter, r *http.Request) {
@@ -106,20 +89,12 @@ func (app *application) createWalletHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusCreated)
-
 	resp := map[string]string{
 		"ID":      strconv.Itoa(id),
 		"message": "Wallet created",
 	}
 
-	err = json.NewEncoder(w).Encode(resp)
-	if err != nil {
-		app.serverError(w, err)
-		return
-	}
-
+	app.writeJSONResponseBody(w, http.StatusCreated, resp)
 }
 
 func (app *application) listExpensesHandler(w http.ResponseWriter, r *http.Request) {
@@ -148,13 +123,6 @@ func (app *application) listExpensesHandler(w http.ResponseWriter, r *http.Reque
 		return
 	}
 
-	w.Header().Set("Content-Type", "application/json")
+	app.writeJSONResponseBody(w, http.StatusOK, expenses)
 
-	w.WriteHeader(http.StatusOK)
-
-	err = json.NewEncoder(w).Encode(expenses)
-	if err != nil {
-		app.serverError(w, err)
-		return
-	}
 }
