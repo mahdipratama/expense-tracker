@@ -91,3 +91,82 @@ func (m *WalletModel) All() ([]*Wallet, error) {
 
 	return wallets, nil
 }
+
+func (m *WalletModel) Transfer(fromID, toID, amount int) error {
+	if fromID == toID {
+		return ErrDuplicateWallet
+	}
+	if amount <= 0 {
+		return ErrInsufficientBalance
+	}
+
+	tx, err := m.DB.Begin()
+	if err != nil {
+		return err
+	}
+
+	defer tx.Rollback()
+
+	// Urutan ID (min dan max) untuk menghindari deadlock
+	/*
+			Tujuan utamanya hanya satu: Memaksa database untuk selalu mengunci (lock) baris data dengan urutan yang sama persis, dari ID terkecil ke ID terbesar, tidak peduli arah transfernya dari mana ke mana.
+
+		teknik standar untuk mencegah Deadlock (situasi di mana database macet atau hang karena dua proses saling mengunci satu sama lain).
+	*/
+	w1ID := fromID
+	w2ID := toID
+	if w1ID > w2ID {
+		w1ID, w2ID = w2ID, w1ID
+	}
+
+	// Locking with FOR UPDATE
+	var bal1, bal2 int
+	err = tx.QueryRow("SELECT balance FROM wallets WHERE id = ? FOR UPDATE", w1ID).Scan(&bal1)
+	if err != nil {
+		return err
+	}
+
+	err = tx.QueryRow("SELECT balance FROM wallets WHERE id = ? FOR UPDATE", toID).Scan(&bal2)
+	if err != nil {
+		return err
+	}
+
+	fromBalance := bal1
+	if fromID == w2ID {
+		fromBalance = bal2
+	}
+
+	if fromBalance < amount {
+		return ErrInsufficientBalance
+	}
+
+	// UPDATE kedua Wallet
+	var totalAffected int
+	w1, err := tx.Exec("UPDATE wallets SET balance = balance - ? WHERE id = ?", amount, fromID)
+	if err != nil {
+		return err
+	}
+	aff1, err := w1.RowsAffected()
+	if err != nil {
+		return err
+	}
+	totalAffected += int(aff1)
+
+	w2, err := tx.Exec("UPDATE wallets SET balance = balance + ? WHERE id = ?", amount, toID)
+	if err != nil {
+		return err
+	}
+	aff2, err := w2.RowsAffected()
+	if err != nil {
+		return err
+	}
+	totalAffected += int(aff2)
+
+	if totalAffected != 2 {
+		return ErrNoRowsAffected
+	}
+
+	err = tx.Commit()
+
+	return err
+}
