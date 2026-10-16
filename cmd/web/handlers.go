@@ -5,6 +5,7 @@ import (
 	"net/http"
 	"strconv"
 	"strings"
+	"time"
 
 	"github.com/mahdipratama/expense-tracker/internal/models"
 )
@@ -124,5 +125,74 @@ func (app *application) listExpensesHandler(w http.ResponseWriter, r *http.Reque
 	}
 
 	app.writeJSONResponseBody(w, http.StatusOK, expenses)
+
+}
+
+func (app *application) createExpenseHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		app.clientError(w, http.StatusMethodNotAllowed)
+		return
+	}
+
+	err := r.ParseForm()
+	if err != nil {
+		app.badRequest(w, "Failed to parse form")
+		return
+	}
+
+	walletIDStr := r.PostForm.Get("wallet_id")
+	title := strings.TrimSpace(r.PostForm.Get("title"))
+	amountStr := r.PostForm.Get("amount")
+	category := strings.TrimSpace(r.PostForm.Get("category"))
+
+	walletID, err := strconv.Atoi(walletIDStr)
+	if err != nil || walletID < 1 {
+		app.badRequest(w, "Invalid wallet ID")
+		return
+	}
+
+	wallet, err := app.wallets.Get(walletID)
+	if err != nil || err == models.ErrNoRecord {
+		app.notFound(w)
+		return
+	}
+
+	if title == "" || category == "" {
+		app.badRequest(w, "Wallet name and category can not be empty")
+		return
+	}
+
+	amount, err := strconv.Atoi(amountStr)
+	if err != nil {
+		app.badRequest(w, "amount must be a valid number")
+		return
+	}
+
+	if amount <= 0 {
+		app.badRequest(w, "amount can not be negative or zero")
+		return
+	}
+
+	if amount > wallet.Balance {
+		app.badRequest(w, "sorry, insufficient balance")
+		return
+	}
+
+	expense := &models.Expense{
+		WalletID: walletID,
+		Title:    title,
+		Amount:   amount,
+		Category: category,
+		SpentAt:  time.Now(),
+	}
+
+	err = app.expense.Spend(expense)
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	app.writeJSONResponseBody(w, http.StatusOK, expense)
 
 }
