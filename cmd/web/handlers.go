@@ -141,7 +141,7 @@ func (app *application) createExpenseHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	walletIDStr := r.PostForm.Get("wallet_id")
+	walletIDStr := r.PostForm.Get("wallet")
 	title := strings.TrimSpace(r.PostForm.Get("title"))
 	amountStr := r.PostForm.Get("amount")
 	category := strings.TrimSpace(r.PostForm.Get("category"))
@@ -153,8 +153,12 @@ func (app *application) createExpenseHandler(w http.ResponseWriter, r *http.Requ
 	}
 
 	wallet, err := app.wallets.Get(walletID)
-	if err != nil || err == models.ErrNoRecord {
-		app.notFound(w)
+	if err != nil {
+		if errors.Is(err, models.ErrNoRecord) {
+			app.notFound(w)
+		} else {
+			app.serverError(w, err)
+		}
 		return
 	}
 
@@ -174,13 +178,8 @@ func (app *application) createExpenseHandler(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
-	if amount > wallet.Balance {
-		app.badRequest(w, "sorry, insufficient balance")
-		return
-	}
-
 	expense := &models.Expense{
-		WalletID: walletID,
+		WalletID: wallet.ID,
 		Title:    title,
 		Amount:   amount,
 		Category: category,
@@ -189,10 +188,15 @@ func (app *application) createExpenseHandler(w http.ResponseWriter, r *http.Requ
 
 	err = app.expense.Spend(expense)
 	if err != nil {
-		app.serverError(w, err)
+		if errors.Is(err, models.ErrInsufficientBalance) {
+			app.badRequest(w, "Insufficient balance")
+		} else {
+			app.serverError(w, err)
+		}
 		return
 	}
 
-	app.writeJSONResponseBody(w, http.StatusOK, expense)
+	app.writeJSONResponseBody(w, http.StatusCreated, expense)
 
 }
+
