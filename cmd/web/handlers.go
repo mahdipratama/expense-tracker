@@ -234,6 +234,20 @@ func (app *application) transferHandler(w http.ResponseWriter, r *http.Request) 
 		return
 	}
 
+	walletsToCheck := []int{fromID, toID}
+	for _, id := range walletsToCheck {
+		_, err := app.wallets.Get(id)
+		if err != nil {
+			if errors.Is(err, models.ErrNoRecord) {
+				app.notFound(w)
+				return
+			} else {
+				app.serverError(w, err)
+				return
+			}
+		}
+	}
+
 	amount, err := strconv.Atoi(amountStr)
 	if err != nil {
 		app.badRequest(w, "amount must be a valid number")
