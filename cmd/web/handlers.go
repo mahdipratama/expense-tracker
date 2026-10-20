@@ -288,3 +288,20 @@ func (app *application) transferHandler(w http.ResponseWriter, r *http.Request) 
 	app.writeJSONResponseBody(w, http.StatusOK, transferResponse)
 
 }
+
+func (app *application) healthz(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet {
+		w.Header().Set("Allow", http.MethodGet)
+		app.clientError(w, http.StatusMethodNotAllowed)
+		return
+	}
+
+	err := app.db.Ping()
+	if err != nil {
+		app.serverError(w, err)
+		return
+	}
+
+	app.writeJSONResponseBody(w, http.StatusOK, "Server: OK!")
+
+}
