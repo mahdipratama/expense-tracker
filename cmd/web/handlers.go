@@ -200,3 +200,77 @@ func (app *application) createExpenseHandler(w http.ResponseWriter, r *http.Requ
 
 }
 
+func (app *application) transferHandler(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodPost {
+		w.Header().Set("Allow", http.MethodPost)
+		app.clientError(w, http.StatusMethodNotAllowed)
+		return
+	}
+
+	err := r.ParseForm()
+	if err != nil {
+		app.badRequest(w, "Failed to parsed form")
+		return
+	}
+
+	fromIDStr := r.PostForm.Get("from")
+	toIDStr := r.PostForm.Get("to")
+	amountStr := strings.TrimSpace(r.PostForm.Get("amount"))
+
+	fromID, err := strconv.Atoi(fromIDStr)
+	if err != nil || fromID < 1 {
+		app.badRequest(w, "Invalid wallet ID")
+		return
+	}
+
+	toID, err := strconv.Atoi(toIDStr)
+	if err != nil || toID < 1 {
+		app.badRequest(w, "Invalid wallet ID")
+		return
+	}
+
+	if fromID == toID {
+		app.badRequest(w, "The source and target wallets cannot be identical.")
+		return
+	}
+
+	amount, err := strconv.Atoi(amountStr)
+	if err != nil {
+		app.badRequest(w, "amount must be a valid number")
+		return
+	}
+
+	if amount <= 0 {
+		app.badRequest(w, "amount can not be negative or zero")
+		return
+	}
+
+	err = app.wallets.Transfer(fromID, toID, amount)
+	if err != nil {
+		if errors.Is(err, models.ErrInsufficientBalance) {
+			app.badRequest(w, "Insufficient balance")
+		} else if errors.Is(err, models.ErrNoRecord) {
+			app.notFound(w)
+		} else {
+			app.serverError(w, err)
+		}
+		return
+	}
+
+	type transfer struct {
+		Message string
+		FromID  int
+		ToID    int
+		Amount  int
+	}
+
+	transferResponse := &transfer{
+		Message: "Transfer successful",
+		FromID:  fromID,
+		ToID:    toID,
+		Amount:  amount,
+	}
+
+	app.writeJSONResponseBody(w, http.StatusOK, transferResponse)
+
+}
