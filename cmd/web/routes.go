@@ -12,6 +12,8 @@ func (app *application) routes() *http.ServeMux {
 	mux.HandleFunc("/expenses", app.listExpensesHandler)
 	mux.HandleFunc("/expense/create", app.createExpenseHandler)
 	mux.HandleFunc("/transfer", app.transferHandler)
+	mux.HandleFunc("/healthz", app.healthz)
+
 
 	return mux
 }
