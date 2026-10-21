@@ -97,7 +97,7 @@ func (m *WalletModel) Transfer(fromID, toID, amount int) error {
 		return ErrDuplicateWallet
 	}
 	if amount <= 0 {
-		return ErrInsufficientBalance
+		return ErrInvalidAmount
 	}
 
 	tx, err := m.DB.Begin()
@@ -113,60 +113,55 @@ func (m *WalletModel) Transfer(fromID, toID, amount int) error {
 
 		teknik standar untuk mencegah Deadlock (situasi di mana database macet atau hang karena dua proses saling mengunci satu sama lain).
 	*/
-	w1ID := fromID
-	w2ID := toID
+	w1ID, w2ID := fromID, toID
+
 	if w1ID > w2ID {
 		w1ID, w2ID = w2ID, w1ID
 	}
 
-	// Locking with FOR UPDATE
-	var bal1, bal2 int
-	err = tx.QueryRow("SELECT balance FROM wallets WHERE id = ? FOR UPDATE", w1ID).Scan(&bal1)
-	if err != nil {
-		return err
+	balances := make(map[int]int, 2)
+	for _, id := range []int{w1ID, w2ID} {
+		var bal int
+		err := tx.QueryRow("SELECT balance FROM wallets WHERE id = ? FOR UPDATE", id).Scan(&bal)
+		if err != nil {
+			if errors.Is(err, sql.ErrNoRows) {
+				return ErrNoRecord
+			}
+			return err
+		}
+		balances[id] = bal
 	}
 
-	err = tx.QueryRow("SELECT balance FROM wallets WHERE id = ? FOR UPDATE", toID).Scan(&bal2)
-	if err != nil {
-		return err
-	}
-
-	fromBalance := bal1
-	if fromID == w2ID {
-		fromBalance = bal2
-	}
-
-	if fromBalance < amount {
+	if balances[fromID] < amount {
 		return ErrInsufficientBalance
 	}
 
 	// UPDATE kedua Wallet
-	var totalAffected int
-	w1, err := tx.Exec("UPDATE wallets SET balance = balance - ? WHERE id = ?", amount, fromID)
+	res, err := tx.Exec("UPDATE wallets SET balance = balance - ? WHERE id = ? AND BALANCE >= ?", amount, fromID, amount)
 	if err != nil {
 		return err
 	}
-	aff1, err := w1.RowsAffected()
-	if err != nil {
-		return err
-	}
-	totalAffected += int(aff1)
 
-	w2, err := tx.Exec("UPDATE wallets SET balance = balance + ? WHERE id = ?", amount, toID)
+	n, err := res.RowsAffected()
 	if err != nil {
 		return err
 	}
-	aff2, err := w2.RowsAffected()
-	if err != nil {
-		return err
-	}
-	totalAffected += int(aff2)
-
-	if totalAffected != 2 {
+	if n != 1 {
 		return ErrNoRowsAffected
 	}
 
-	err = tx.Commit()
+	res, err = tx.Exec("UPDATE wallets SET balance = balance + ? WHERE id = ?", amount, toID)
+	if err != nil {
+		return err
+	}
 
-	return err
+	n, err = res.RowsAffected()
+	if err != nil {
+		return err
+	}
+	if n != 1 {
+		return ErrNoRowsAffected
+	}
+
+	return tx.Commit()
 }
