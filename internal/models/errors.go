@@ -7,4 +7,5 @@ var (
 	ErrDuplicateWallet     = errors.New("models: duplicate wallet name")
 	ErrInsufficientBalance = errors.New("model: insufficient balance")
 	ErrNoRowsAffected      = errors.New("model: no rows affected")
+	ErrInvalidAmount       = errors.New("model: amount must be greater than zero")
 )
