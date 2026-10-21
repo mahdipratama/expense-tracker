@@ -70,22 +70,6 @@ func (m *ExpenseModel) Spend(e *Expense) error {
 
 	defer tx.Rollback()
 
-	// INSERT EXPENSES
-	insertStmt := `
-	INSERT INTO expense (wallet_id, title, amount, category, spent_at)
-	VALUES (?, ?, ?, ?, ?)
-	`
-	res, err := tx.Exec(insertStmt, e.WalletID, e.Title, e.Amount, e.Category, e.SpentAt)
-	if err != nil {
-		return err
-	}
-
-	id, err := res.LastInsertId()
-	if err != nil {
-		return err
-	}
-	e.ID = int(id)
-
 	// CHECK BALANCE FIRST
 	var currentBalance int
 	err = tx.QueryRow("SELECT balance FROM wallets WHERE id = ? FOR UPDATE ", e.WalletID).Scan(&currentBalance)
@@ -103,7 +87,7 @@ func (m *ExpenseModel) Spend(e *Expense) error {
   SET balance = balance - ? 
   WHERE id = ? AND balance >= ? ;
 	`
-	res, err = tx.Exec(updateStmt, e.Amount, e.WalletID, e.Amount)
+	res, err := tx.Exec(updateStmt, e.Amount, e.WalletID, e.Amount)
 	if err != nil {
 		return err
 	}
@@ -114,6 +98,22 @@ func (m *ExpenseModel) Spend(e *Expense) error {
 	}
 
 	err = tx.Commit()
+
+	// INSERT EXPENSES
+	insertStmt := `
+	INSERT INTO expense (wallet_id, title, amount, category, spent_at)
+	VALUES (?, ?, ?, ?, ?)
+	`
+	res, err = tx.Exec(insertStmt, e.WalletID, e.Title, e.Amount, e.Category, e.SpentAt)
+	if err != nil {
+		return err
+	}
+
+	id, err := res.LastInsertId()
+	if err != nil {
+		return err
+	}
+	e.ID = int(id)
 
 	return err
 }
