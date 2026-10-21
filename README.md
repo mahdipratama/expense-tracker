@@ -81,9 +81,9 @@ Terdapat dua entitas utama dalam sistem ini: `wallets` dan `expenses`.
 
 ```sql
 CREATE TABLE wallets (
-    id INT AUTO_INCREMENT PRIMARY KEY,
-    name VARCHAR(255) NOT NULL,
-    balance DECIMAL(10, 2) NOT NULL DEFAULT 0.00,
+    id INT NOT NULL AUTO_INCREMENT ,
+    name VARCHAR(100) NOT NULL,
+    balance INT NOT NULL DEFAULT ,
     created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
     CONSTRAINT chk_balance_positive CHECK (balance >= 0)
 );
@@ -93,12 +93,15 @@ CREATE TABLE wallets (
 
 ```sql
 CREATE TABLE expenses (
-    id INT AUTO_INCREMENT PRIMARY KEY,
+    id INT NOT NULL AUTO_INCREMENT,
     wallet_id INT NOT NULL,
-    amount DECIMAL(10, 2) NOT NULL,
-    description TEXT,
-    created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (wallet_id) REFERENCES wallets(id) ON DELETE CASCADE
+    amount INT NOT NULL,
+    category VARCHAR(100) NOT NULL,
+    spent_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    PRIMARY KEY (`id`),
+    KEY `idx_wallet_id` (`wallet_id`),
+    CONSTRAINT `expense_ibfk_1` FOREIGN KEY (`wallet_id`) REFERENCES `wallets` (`id`),
+    CONSTRAINT `expense_chk_1` CHECK ((`amount` > 0))
 );
 ```
 
